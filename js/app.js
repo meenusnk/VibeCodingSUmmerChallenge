@@ -92,8 +92,10 @@ form.addEventListener("submit", async (event) => {
       voteCount: 0,
       status: "approved"
     });
-    setMessage(formMessage, "Your game has been submitted. Thanks for sharing it!", "success");
+    setMessage(formMessage, "🎉 Your game has been submitted successfully! Thanks for sharing it!", "success");
     form.reset();
+    // Auto-hide success message after 4 seconds
+    setTimeout(() => clearMessage(formMessage), 4000);
   } catch (error) {
     console.error(error);
     setMessage(formMessage, "Your game could not be saved. Please check your connection and try again.", "error");
@@ -159,6 +161,7 @@ function renderGames() {
 
   gamesEmpty.hidden = true;
   gamesNoResults.hidden = true;
+  gamesList.className = "games-grid";
   gamesList.innerHTML = "";
 
   filtered.forEach((game) => {

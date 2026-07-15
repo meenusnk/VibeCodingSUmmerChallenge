@@ -153,37 +153,26 @@ function renderAdmin() {
     return;
   }
 
-  const table = document.createElement("table");
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Student</th>
-        <th>Game</th>
-        <th>Link</th>
-        <th>Votes</th>
-        <th>Date</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  `;
-  const body = table.querySelector("tbody");
+  listContainer.className = "games-grid";
+  listContainer.innerHTML = "";
+
   filtered.forEach((game) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${escapeText(game.studentName)}</td>
-      <td>${escapeText(game.gameName)}</td>
-      <td><a href="${escapeText(game.gameUrl)}" target="_blank" rel="noopener noreferrer">Open</a></td>
-      <td>${game.voteCount ?? 0}</td>
-      <td>${formatDate(game.createdAt)}</td>
-      <td><button class="delete-btn" data-game-id="${game.id}" title="Delete game">🗑️ Delete</button></td>
+    const card = document.createElement("article");
+    card.className = "card game-card";
+    card.innerHTML = `
+      <h3>${escapeText(game.gameName)}</h3>
+      <div class="game-card__meta">By ${escapeText(game.studentName)} • ${formatDate(game.createdAt)}</div>
+      <p class="game-card__description">${escapeText(game.description ?? "No description")}</p>
+      <div class="game-card__footer">
+        <a class="button button--secondary" href="${escapeText(game.gameUrl)}" target="_blank" rel="noopener noreferrer">Play Game</a>
+        <span class="vote-pill">⭐ ${game.voteCount ?? 0}</span>
+        <button class="delete-btn" data-game-id="${game.id}" title="Delete game">🗑️ Delete</button>
+      </div>
     `;
-    body.appendChild(row);
-    const deleteBtn = row.querySelector(".delete-btn");
+    listContainer.appendChild(card);
+    const deleteBtn = card.querySelector(".delete-btn");
     deleteBtn.addEventListener("click", () => handleDeleteGame(game.id, game.gameName));
   });
-  listContainer.innerHTML = "";
-  listContainer.appendChild(table);
 }
 
 function compareGames(a, b) {
@@ -199,9 +188,26 @@ async function handleDeleteGame(gameId, gameName) {
 
   try {
     await deleteGame(gameId);
-    // Refresh the list - the listener will handle the update
+    // Show success notification
+    showDeleteNotification(`🗑️ "${gameName}" has been deleted successfully.`);
   } catch (error) {
     console.error("Error deleting game:", error);
     alert("Failed to delete game. Please try again.");
   }
+}
+
+function showDeleteNotification(message) {
+  const notification = document.createElement("div");
+  notification.className = "notification notification--success";
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.classList.add("notification--show");
+  }, 10);
+
+  setTimeout(() => {
+    notification.classList.remove("notification--show");
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
