@@ -27,7 +27,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voteCount'])
         && request.resource.data.voteCount == resource.data.voteCount + 1;
 
-      allow delete: if false;
+      allow delete: if request.auth != null;
 
       match /votes/{voteId} {
         allow read: if true;

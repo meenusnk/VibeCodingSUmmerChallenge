@@ -1,5 +1,19 @@
-import { listenToGamesAdmin } from "./firebase.js";
+import { listenToGamesAdmin, deleteGame } from "./firebase.js";
 import { escapeText, formatDate } from "./ui.js";
+
+// Admin credentials
+const ADMIN_USERNAME = "codingadmin";
+const ADMIN_PASSWORD = "vibe";
+
+// DOM Elements
+const loginScreen = document.getElementById("login-screen");
+const loginForm = document.getElementById("login-form");
+const usernameInput = document.getElementById("admin-username");
+const passwordInput = document.getElementById("admin-password");
+const loginError = document.getElementById("login-error");
+const adminHeader = document.getElementById("admin-header");
+const adminContent = document.getElementById("admin-content");
+const logoutButton = document.getElementById("logout-button");
 
 const statsContainer = document.getElementById("admin-stats");
 const topGamesContainer = document.getElementById("admin-top-games");
@@ -9,19 +23,77 @@ const searchInput = document.getElementById("admin-search");
 const sortSelect = document.getElementById("admin-sort");
 
 let allGames = [];
+let isAuthenticated = false;
 
-listenToGamesAdmin((games, error) => {
-  loadingElement.hidden = true;
-  if (error) {
-    listContainer.innerHTML = '<div class="empty-state">Unable to load the admin dashboard right now.</div>';
+// Check if already logged in
+function checkAuth() {
+  const token = sessionStorage.getItem("admin-token");
+  if (token === "authenticated") {
+    showDashboard();
     return;
   }
-  allGames = games;
-  renderAdmin();
+  showLogin();
+}
+
+function showLogin() {
+  loginScreen.classList.remove("hidden");
+  adminHeader.hidden = true;
+  adminContent.hidden = true;
+  isAuthenticated = false;
+}
+
+function showDashboard() {
+  loginScreen.classList.add("hidden");
+  adminHeader.hidden = false;
+  adminContent.hidden = false;
+  isAuthenticated = true;
+  if (!allGames.length) {
+    initializeDashboard();
+  }
+}
+
+loginForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
+
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    sessionStorage.setItem("admin-token", "authenticated");
+    loginError.classList.remove("show");
+    loginError.textContent = "";
+    showDashboard();
+  } else {
+    loginError.textContent = "Invalid username or password";
+    loginError.classList.add("show");
+    passwordInput.value = "";
+  }
 });
 
-searchInput.addEventListener("input", renderAdmin);
-sortSelect.addEventListener("change", renderAdmin);
+logoutButton.addEventListener("click", () => {
+  sessionStorage.removeItem("admin-token");
+  usernameInput.value = "";
+  passwordInput.value = "";
+  showLogin();
+});
+
+// Initialize
+checkAuth();
+
+// Initialize dashboard only after authentication
+function initializeDashboard() {
+  listenToGamesAdmin((games, error) => {
+    loadingElement.hidden = true;
+    if (error) {
+      listContainer.innerHTML = '<div class="empty-state">Unable to load the admin dashboard right now.</div>';
+      return;
+    }
+    allGames = games;
+    renderAdmin();
+  });
+
+  searchInput.addEventListener("input", renderAdmin);
+  sortSelect.addEventListener("change", renderAdmin);
+}
 
 function renderAdmin() {
   const query = searchInput.value.trim().toLowerCase();
@@ -75,6 +147,7 @@ function renderAdmin() {
         <th>Link</th>
         <th>Votes</th>
         <th>Date</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -88,8 +161,11 @@ function renderAdmin() {
       <td><a href="${escapeText(game.gameUrl)}" target="_blank" rel="noopener noreferrer">Open</a></td>
       <td>${game.voteCount ?? 0}</td>
       <td>${formatDate(game.createdAt)}</td>
+      <td><button class="delete-btn" data-game-id="${game.id}" title="Delete game">🗑️ Delete</button></td>
     `;
     body.appendChild(row);
+    const deleteBtn = row.querySelector(".delete-btn");
+    deleteBtn.addEventListener("click", () => handleDeleteGame(game.id, game.gameName));
   });
   listContainer.innerHTML = "";
   listContainer.appendChild(table);
@@ -99,4 +175,18 @@ function compareGames(a, b) {
   const voteDiff = (b.voteCount ?? 0) - (a.voteCount ?? 0);
   if (voteDiff !== 0) return voteDiff;
   return (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0);
+}
+
+async function handleDeleteGame(gameId, gameName) {
+  if (!confirm(`Are you sure you want to delete "${gameName}"? This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    await deleteGame(gameId);
+    // Refresh the list - the listener will handle the update
+  } catch (error) {
+    console.error("Error deleting game:", error);
+    alert("Failed to delete game. Please try again.");
+  }
 }
