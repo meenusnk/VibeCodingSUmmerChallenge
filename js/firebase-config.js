@@ -1,10 +1,10 @@
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAabqvBsqo1-TQxsgf07y5lDdRGfM3RHyQ",
+  authDomain: "summer-vibe-festival.firebaseapp.com",
+  projectId: "summer-vibe-festival",
+  storageBucket: "summer-vibe-festival.firebasestorage.app",
+  messagingSenderId: "126725971031",
+  appId: "1:126725971031:web:5c9761f544485000f75712"
 };
 
 // Replace these placeholder values with your real Firebase web configuration before deploying.
