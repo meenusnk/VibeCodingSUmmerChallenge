@@ -74,10 +74,25 @@ logoutButton.addEventListener("click", () => {
   usernameInput.value = "";
   passwordInput.value = "";
   showLogin();
+  // Redirect to home after logout for security
+  setTimeout(() => {
+    window.location.href = "./index.html";
+  }, 500);
 });
 
 // Initialize
 checkAuth();
+
+// Prevent browser back button from showing admin content without login
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    // Page was restored from browser cache
+    const token = sessionStorage.getItem("admin-token");
+    if (!token) {
+      showLogin();
+    }
+  }
+});
 
 // Initialize dashboard only after authentication
 function initializeDashboard() {
