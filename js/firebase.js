@@ -1,21 +1,34 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.14.0/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, runTransaction, deleteDoc } from "https://www.gstatic.com/firebasejs/11.14.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.14.0/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+// Load Firebase SDK from unpkg CDN as fallback
+const firebaseScript = document.createElement('script');
+firebaseScript.src = 'https://unpkg.com/firebase@11.14.0/dist/firebase-compat.js';
+document.head.appendChild(firebaseScript);
+
+let app, db, auth;
+let firebaseReady = new Promise((resolve) => {
+  firebaseScript.onload = () => {
+    firebase.initializeApp(firebaseConfig);
+    app = firebase.app();
+    db = firebase.firestore();
+    auth = firebase.auth();
+    resolve();
+  };
+});
+
+// Wait for Firebase to load before using
+const waitForFirebase = () => firebaseReady;
 
 export async function ensureAnonymousUser() {
+  await waitForFirebase();
   return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       unsubscribe();
       if (user) {
         resolve(user);
       } else {
         try {
-          const result = await signInAnonymously(auth);
+          const result = await auth.signInAnonymously();
           resolve(result.user);
         } catch (error) {
           reject(error);
@@ -26,54 +39,66 @@ export async function ensureAnonymousUser() {
 }
 
 export function listenToGames(callback) {
-  const q = query(collection(db, "games"), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
-    const games = snapshot.docs
-      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter((game) => game.status === "approved");
-    callback(games);
-  }, (error) => {
-    callback([], error);
+  waitForFirebase().then(() => {
+    db.collection("games")
+      .orderBy("createdAt", "desc")
+      .onSnapshot((snapshot) => {
+        const games = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter((game) => game.status === "approved");
+        callback(games);
+      }, (error) => {
+        callback([], error);
+      });
   });
 }
 
 export function listenToGamesAdmin(callback) {
-  const q = query(collection(db, "games"), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
-    const games = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    callback(games);
-  }, (error) => {
-    callback([], error);
+  waitForFirebase().then(() => {
+    db.collection("games")
+      .orderBy("createdAt", "desc")
+      .onSnapshot((snapshot) => {
+        const games = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        callback(games);
+      }, (error) => {
+        callback([], error);
+      });
   });
 }
 
 export function listenToVotes(gameId, callback) {
-  const votesRef = collection(db, "games", gameId, "votes");
-  return onSnapshot(votesRef, (snapshot) => {
-    callback(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
-  }, (error) => {
-    callback([], error);
+  waitForFirebase().then(() => {
+    db.collection("games")
+      .doc(gameId)
+      .collection("votes")
+      .onSnapshot((snapshot) => {
+        callback(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      }, (error) => {
+        callback([], error);
+      });
   });
 }
 
 export async function submitGame(gameData) {
-  return addDoc(collection(db, "games"), {
+  await waitForFirebase();
+  return db.collection("games").add({
     ...gameData,
     voteCount: 0,
     status: "approved",
-    createdAt: serverTimestamp()
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
 
 export async function voteForGame(gameId, userId) {
-  const gameRef = doc(db, "games", gameId);
-  const voteRef = doc(db, "games", gameId, "votes", userId);
+  await waitForFirebase();
+  return db.runTransaction(async (transaction) => {
+    const gameRef = db.collection("games").doc(gameId);
+    const voteRef = db.collection("games").doc(gameId).collection("votes").doc(userId);
 
-  return runTransaction(db, async (transaction) => {
     const gameDoc = await transaction.get(gameRef);
     const existingVote = await transaction.get(voteRef);
 
-    if (existingVote.exists()) {
+    if (existingVote.exists) {
       return { alreadyVoted: true, voteCount: gameDoc.data()?.voteCount ?? 0 };
     }
 
@@ -82,7 +107,7 @@ export async function voteForGame(gameId, userId) {
     transaction.update(gameRef, { voteCount: newVoteCount });
     transaction.set(voteRef, {
       voterId: userId,
-      createdAt: serverTimestamp()
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     return { alreadyVoted: false, voteCount: newVoteCount };
@@ -90,11 +115,12 @@ export async function voteForGame(gameId, userId) {
 }
 
 export async function hasVoted(gameId, userId) {
-  const voteRef = doc(db, "games", gameId, "votes", userId);
-  const voteDoc = await getDoc(voteRef);
-  return voteDoc.exists();
+  await waitForFirebase();
+  const voteDoc = await db.collection("games").doc(gameId).collection("votes").doc(userId).get();
+  return voteDoc.exists;
 }
 
 export async function deleteGame(gameId) {
-  return deleteDoc(doc(db, "games", gameId));
+  await waitForFirebase();
+  return db.collection("games").doc(gameId).delete();
 }
