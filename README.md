@@ -234,6 +234,15 @@ Students should enter only their first name or a classroom display name. They sh
 
 All submissions may be publicly visible. The teacher may remove links that are not appropriate for the activity.
 
-## 29. Known limitations of browser-based anonymous voting
+## 29. Suggested follow-up TODOs
+
+- [ ] Replace the placeholder Firebase values in js/firebase-config.js with your real project settings.
+- [ ] Publish the Firestore rules from firestore.rules in the Firebase Console.
+- [ ] Enable Anonymous Authentication in Firebase.
+- [ ] Deploy the repository to GitHub Pages from the main branch.
+- [ ] Test submitting and voting from at least two different browsers.
+- [ ] Optionally add stronger teacher authentication later if you want a more secure admin experience.
+
+## 30. Known limitations of browser-based anonymous voting
 
 Anonymous voting is convenient for a classroom activity, but it is not perfect identity verification. Clearing browser storage, using another browser, or using another device can create a new anonymous identity. This project does not collect personal information beyond what students choose to enter.
