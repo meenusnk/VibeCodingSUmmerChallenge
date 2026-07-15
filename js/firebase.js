@@ -1,8 +1,8 @@
 import { firebaseConfig } from "./firebase-config.js";
 
-// Load Firebase SDK from unpkg CDN as fallback
+// Load Firebase SDK from jsDelivr CDN (better support, less tracking prevention issues)
 const firebaseScript = document.createElement('script');
-firebaseScript.src = 'https://unpkg.com/firebase@11.14.0/dist/firebase-compat.js';
+firebaseScript.src = 'https://cdn.jsdelivr.net/npm/firebase@11.14.0/dist/firebase-compat.js';
 document.head.appendChild(firebaseScript);
 
 let app, db, auth;
