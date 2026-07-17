@@ -1,20 +1,28 @@
 import { firebaseConfig } from "./firebase-config.js";
 
-// Load Firebase SDK from jsDelivr CDN (better support, less tracking prevention issues)
-const firebaseScript = document.createElement('script');
-firebaseScript.src = 'https://cdn.jsdelivr.net/npm/firebase@11.14.0/dist/firebase-compat.js';
-document.head.appendChild(firebaseScript);
+const FIREBASE_VERSION = '10.14.1';
+const BASE = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(s);
+  });
+}
 
 let app, db, auth;
-let firebaseReady = new Promise((resolve) => {
-  firebaseScript.onload = () => {
-    firebase.initializeApp(firebaseConfig);
-    app = firebase.app();
-    db = firebase.firestore();
-    auth = firebase.auth();
-    resolve();
-  };
-});
+let firebaseReady = (async () => {
+  await loadScript(`${BASE}/firebase-app-compat.js`);
+  await loadScript(`${BASE}/firebase-firestore-compat.js`);
+  await loadScript(`${BASE}/firebase-auth-compat.js`);
+  firebase.initializeApp(firebaseConfig);
+  app = firebase.app();
+  db = firebase.firestore();
+  auth = firebase.auth();
+})();
 
 // Wait for Firebase to load before using
 const waitForFirebase = () => firebaseReady;
